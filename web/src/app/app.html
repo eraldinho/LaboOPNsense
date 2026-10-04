@@ -1,0 +1,33 @@
+<div class="shell">
+  <header class="top">
+    <a routerLink="/parcours" class="brand">
+      <span class="mark">LO</span>
+      <span>
+        <strong>Labo OPNsense</strong>
+        <small>Pare-feu, Hyper-V et VLAN</small>
+      </span>
+    </a>
+    <div class="top-actions">
+      @if (session.isReady()) {
+        <div class="meta">
+          @if (session.isPreview()) {
+            <span class="pill mock">Aperçu professeur</span>
+          } @else if (session.isMock()) {
+            <span class="pill mock">Séance locale (mock)</span>
+          }
+          <span class="pill" [class.ok]="session.progress().finished">{{ session.progress().countsLabel }}</span>
+          @if (session.progress().finished) {
+            <span class="pill ok">Séance terminée</span>
+          } @else {
+            <span class="pill current">{{ session.progress().currentLabel }}</span>
+          }
+          <span class="time">{{ session.remainingLabel() }}</span>
+        </div>
+      }
+      <app-bug-report />
+    </div>
+  </header>
+  <main class="main">
+    <router-outlet />
+  </main>
+</div>

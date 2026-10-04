@@ -1,0 +1,325 @@
+:root {
+  --bg: #10151c;
+  --bg-raise: #182029;
+  --bg-raise-2: #1f2a35;
+  --line: #2b3947;
+  --text: #e8eef4;
+  --muted: #93a3b5;
+  --accent: #e0b04a;
+  --accent-2: #7eb6d9;
+  --ok: #6fbf8b;
+  --warn: #e0b04a;
+  --danger: #e07a6f;
+  --rule: #7eb6d9;
+  --sans: 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: radial-gradient(1200px 500px at 10% -10%, #1c2733 0%, var(--bg) 55%);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+pre,
+code,
+.mono {
+  font-family: var(--mono);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: 1.7rem;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 1.4rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.4rem;
+}
+
+p {
+  margin: 0.4rem 0 0.7rem;
+  color: color-mix(in srgb, var(--text) 92%, var(--muted));
+}
+
+ul {
+  margin: 0.3rem 0 0.8rem;
+  padding-left: 1.15rem;
+}
+
+li + li {
+  margin-top: 0.25rem;
+}
+
+a {
+  color: var(--accent-2);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  background: var(--bg-raise);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.pill.ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
+}
+
+.pill.mock {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.pill.warn {
+  color: var(--warn);
+}
+
+.pill.milestone {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-raise));
+}
+
+.pill.current {
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 50%, var(--line));
+}
+
+.card {
+  background: var(--bg-raise);
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 1rem 1.1rem;
+}
+
+.section-card[data-kind='title'] {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-raise));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.section-card[data-kind='objectives'] {
+  background: color-mix(in srgb, var(--accent-2) 18%, var(--bg-raise));
+  border-color: color-mix(in srgb, var(--accent-2) 50%, var(--line));
+}
+
+.section-card[data-kind='deliverables'] {
+  background: color-mix(in srgb, var(--ok) 14%, var(--bg-raise));
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--line));
+}
+
+.section-card[data-kind='resources'] {
+  background: color-mix(in srgb, #d4a06a 16%, var(--bg-raise));
+  border-color: color-mix(in srgb, #d4a06a 48%, var(--line));
+}
+
+.section-card[data-kind='intro'] {
+  background: var(--bg-raise);
+}
+
+.section-card[data-kind='know'] {
+  background: color-mix(in srgb, #ff6a4c 24%, var(--bg-raise));
+  border-color: color-mix(in srgb, #ff6a4c 58%, var(--line));
+}
+
+.section-card[data-kind='do'] {
+  background: color-mix(in srgb, var(--accent) 22%, #16110b);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.section-card[data-kind='see'] {
+  background: color-mix(in srgb, #5ec8c0 16%, var(--bg-raise));
+  border-color: color-mix(in srgb, #5ec8c0 45%, var(--line));
+}
+
+.section-card[data-kind='quiz'] {
+  background: color-mix(in srgb, #b57ee0 14%, var(--bg-raise));
+  border-color: color-mix(in srgb, #b57ee0 42%, var(--line));
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid transparent;
+  background: var(--accent);
+  color: #1a1408;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.ghost {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.btn.secondary {
+  background: var(--bg-raise-2);
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.callout {
+  border-left: 3px solid var(--rule);
+  background: color-mix(in srgb, var(--rule) 10%, var(--bg-raise));
+  padding: 0.7rem 0.85rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  margin: 0.7rem 0;
+}
+
+.callout.warn {
+  border-left-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--bg-raise));
+}
+
+.callout.rule {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 9%, var(--bg-raise));
+}
+
+.schema {
+  overflow-x: auto;
+  background: #0c1116;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #d5e4c7;
+}
+
+.commands {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.commands code {
+  display: block;
+  background: #0c1116;
+  border: 1px solid var(--line);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.progress {
+  height: 0.4rem;
+  background: var(--bg-raise-2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.md-link {
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  font-weight: 600;
+}
+.md-link:hover,
+.md-link:focus-visible {
+  color: var(--accent);
+}
+
+.md-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.15rem 0.1rem;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: var(--bg-raise-2);
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.md-file::before {
+  content: '⬇';
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.md-file:hover,
+.md-file:focus-visible {
+  border-color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 12%, var(--bg-raise-2));
+}
+
+app-md-text img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  display: block;
+  margin: 0.35rem 0;
+}
+
+.see-figure {
+  display: block;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.see-figure app-md-text {
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}

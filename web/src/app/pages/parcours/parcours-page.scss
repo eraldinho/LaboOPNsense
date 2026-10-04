@@ -1,0 +1,161 @@
+.save-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin: 0.85rem 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-raise));
+}
+
+.save-bar p {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
+.save-bar .good {
+  color: var(--ok);
+}
+
+.save-bar .bad {
+  color: var(--danger);
+}
+
+.export-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin: 0.85rem 0 1rem;
+}
+
+.export-bar p {
+  margin: 0;
+  flex: 1 1 16rem;
+}
+
+.export-bar .good {
+  color: var(--ok);
+}
+
+.export-bar .bad {
+  color: var(--danger);
+}
+
+.export-key {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.92rem;
+}
+
+.section-editor {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.editor-hint {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.editor-area {
+  width: 100%;
+  min-height: 10rem;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: #0c1116;
+  color: var(--text);
+  padding: 0.7rem 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+h2 {
+  margin: 1.4rem 0 0.4rem;
+  font-size: 1.1rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0.8rem 0 0.6rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.list a {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr auto;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--bg-raise);
+  color: inherit;
+  text-decoration: none;
+}
+
+.list a.locked {
+  opacity: 0.55;
+}
+
+.list a:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+
+.code {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+.title {
+  font-size: 0.95rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.milestone-banner {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0 0 1.4rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px dashed color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg));
+  font-size: 0.9rem;
+}
+
+.milestone-banner.done {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--ok) 50%, var(--line));
+  background: color-mix(in srgb, var(--ok) 8%, var(--bg));
+}
+
+.milestone-banner span {
+  color: var(--muted);
+}
+
+@media (max-width: 700px) {
+  .list a {
+    grid-template-columns: 3.2rem 1fr;
+  }
+
+  .list .pill {
+    grid-column: 2;
+  }
+}

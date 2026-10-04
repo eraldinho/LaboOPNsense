@@ -1,0 +1,107 @@
+<p class="pill">{{ preview() ? 'Aperçu professeur' : 'Parcours guidé' }}</p>
+
+<div class="export-bar">
+  <button class="btn secondary" type="button" [disabled]="exportBusy()" (click)="exportSubject()">
+    {{ exportBusy() === 'subject' ? 'Génération du PDF…' : 'Exporter le sujet' }}
+  </button>
+  @if (!preview()) {
+    <button class="btn ghost" type="button" [disabled]="exportBusy()" (click)="exportResults()">
+      {{ exportBusy() === 'results' ? 'Génération du PDF…' : 'Exporter mes résultats' }}
+    </button>
+  } @else {
+    <label class="export-key">
+      <input type="checkbox" [checked]="withKey()" [disabled]="exportBusy()" (change)="setWithKey($event)" />
+      Inclure le corrigé
+    </label>
+  }
+  @if (exportMessage()) {
+    <p class="good">{{ exportMessage() }}</p>
+  }
+  @if (exportError()) {
+    <p class="bad">{{ exportError() }}</p>
+  }
+</div>
+
+@if (preview()) {
+  <div class="callout warn">
+    Aperçu professeur : crayon sur l’introduction. Les chapitres se gèrent dans Loutravo (bouton
+    Modifier). Clique sur Sauvegarder pour garder le texte.
+  </div>
+  <div class="save-bar">
+    <button class="btn" type="button" [disabled]="saveBusy() || !dirty()" (click)="saveAll()">Sauvegarder</button>
+    @if (dirty()) {
+      <p class="muted">Des modifications n’ont pas encore été sauvegardées.</p>
+    } @else if (saveNotice()) {
+      <p class="good">{{ saveNotice() }}</p>
+    }
+    @if (saveError()) {
+      <p class="bad">{{ saveError() }}</p>
+    }
+  </div>
+}
+
+@if (preview() || intro()) {
+  <app-section-card
+    kind="intro"
+    title="Introduction"
+    [editable]="preview()"
+    [allowStructure]="false"
+    (edit)="startEditIntro()"
+  >
+    @if (editingIntro()) {
+      <div class="section-editor">
+        <textarea
+          class="editor-area"
+          rows="8"
+          [value]="introDraft()"
+          (input)="onIntroDraft($event)"
+        ></textarea>
+        <p class="muted editor-hint">Entrée : nouvelle ligne. Ligne vide : nouveau paragraphe.</p>
+        <div class="editor-actions">
+          <button class="btn" type="button" (click)="applyIntro()">Appliquer</button>
+          <button class="btn ghost" type="button" (click)="cancelIntro()">Annuler</button>
+        </div>
+      </div>
+    } @else if (intro()) {
+      <p><app-md-text [text]="intro()" /></p>
+    } @else {
+      <p class="muted">Aucune introduction. Clique sur le crayon.</p>
+    }
+  </app-section-card>
+}
+
+@if (chapters().length) {
+  <section>
+    <h2>Parcours</h2>
+    @for (g of groups(); track g.id) {
+      <ol class="list">
+        @for (ch of g.items; track ch.id) {
+          <li>
+            <a [routerLink]="['/chapitre', ch.id]" [class.locked]="ch.locked">
+              <span class="code">{{ ch.code }}</span>
+              <span class="title">
+                {{ ch.displayTitle }}
+                @if (ch.milestone) {
+                  <span class="pill milestone">jalon</span>
+                }
+              </span>
+              <span class="pill" [class.ok]="ch.completed" [class.current]="ch.playable && !ch.completed">
+                {{ statusLabel(ch) }}
+              </span>
+            </a>
+          </li>
+        }
+      </ol>
+      @if (g.milestone; as m) {
+        <div class="milestone-banner" [class.done]="groupDone(g)">
+          <strong>Jalon {{ m.code }} — {{ m.shortTitle }}</strong>
+          <span>{{ m.recap }}</span>
+        </div>
+      }
+    }
+  </section>
+} @else {
+  <section class="card">
+    <p>Aucun chapitre dans la séance. Relance l’activité depuis Loutravo.</p>
+  </section>
+}

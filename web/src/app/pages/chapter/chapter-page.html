@@ -1,0 +1,450 @@
+@if (view(); as ch) {
+  <nav class="crumb">
+    <a routerLink="/parcours">Parcours</a>
+    <span>/</span>
+    <span>{{ ch.code || ch.displayTitle }}</span>
+  </nav>
+
+  @if (preview()) {
+    <p class="pill preview-banner">
+      Aperçu professeur — tous les chapitres sont ouverts. Crayon : modifier. Corbeille : supprimer.
+      Flèches d’ajout : section au-dessus ou en dessous. Chevrons : déplacer. Envoyer : autre chapitre.
+      Puis Sauvegarder.
+    </p>
+    <div class="save-bar">
+      <button class="btn" type="button" [disabled]="saveBusy()" (click)="saveChapter()">Sauvegarder</button>
+      @if (dirty()) {
+        <p class="muted">Ce chapitre a été modifié. Clique sur Sauvegarder pour remplacer l’ancienne version.</p>
+      } @else if (saveNotice()) {
+        <p class="good">{{ saveNotice() }}</p>
+      } @else {
+        <p class="muted">Sauvegarder enregistre ce chapitre (et écrase la version précédente).</p>
+      }
+    </div>
+    @if (mockPreview()) {
+      <div class="callout warn">
+        Sans Loutravo, Sauvegarder garde le texte dans ce navigateur seulement. Pour tout le
+        monde, ouvre l’aperçu depuis Loutravo.
+      </div>
+    }
+  }
+
+  @if (ch.locked) {
+    <section class="card">
+      <h1>{{ ch.title }}</h1>
+      @if (ch.testLocked) {
+        <p>Ce test est fermé. Le professeur doit le débloquer.</p>
+      } @else {
+        <p>Ce chapitre est fermé. Finis d’abord le chapitre en cours. On ne saute pas.</p>
+      }
+      <div class="actions">
+        <a routerLink="/parcours" class="btn ghost">Retour au parcours</a>
+        <ng-container [ngTemplateOutlet]="nextChapterLink" />
+      </div>
+    </section>
+  } @else if (content(); as c) {
+    <article>
+      @if (preview() && sections().length === 0) {
+        <div class="empty-sections">
+          <div class="empty-add">
+            <button
+              type="button"
+              class="add-first"
+              (click)="toggleEmptyPicker()"
+              [attr.aria-expanded]="emptyPicker()"
+              aria-label="Ajouter une section"
+              title="Ajouter une section"
+            >
+              +
+            </button>
+            @if (emptyPicker()) {
+              <app-section-type-picker (pick)="addFirstSection($event)" />
+            }
+          </div>
+          <p class="muted">Aucune section. Ajoute la première.</p>
+        </div>
+      }
+
+      @for (sec of sections(); track sec.key; let i = $index) {
+        <app-section-card
+          [kind]="sec.kind"
+          [title]="sec.title"
+          [editable]="preview() && sec.editable"
+          [canMoveUp]="i > 0"
+          [canMoveDown]="i < sections().length - 1"
+          [sendTargets]="sendTargets()"
+          (edit)="startEdit(sec)"
+          (remove)="deleteSection(i, sec.title)"
+          (addAbove)="addSection(i, $event)"
+          (addBelow)="addSection(i + 1, $event)"
+          (moveUp)="moveSection(i, -1)"
+          (moveDown)="moveSection(i, 1)"
+          (sendTo)="sendSection(i, $event)"
+        >
+          @if (sec.kind === 'title') {
+            <div slot="meta" class="pill-row">
+              <span class="pill">Atelier Hyper-V · {{ c.duration }}</span>
+              @if (ch.milestone; as m) {
+                <span class="pill milestone">Jalon {{ m.code }} · {{ m.shortTitle }}</span>
+              }
+              @if (preview()) {
+                <span class="pill mock">Aperçu</span>
+              } @else if (ch.completed) {
+                <span class="pill ok">Terminé</span>
+              } @else if (ch.playable) {
+                <span class="pill">En cours</span>
+              }
+            </div>
+          }
+
+          @if (editingKey() === sec.key) {
+            <div class="section-editor">
+              <label class="sr-only" [attr.for]="'edit-' + sec.key">Texte de la section {{ sec.title }}</label>
+              <textarea
+                #draftArea
+                class="editor-area"
+                [id]="'edit-' + sec.key"
+                [value]="draft()"
+                (input)="onDraft($event)"
+                rows="10"
+              ></textarea>
+              <p class="muted editor-hint">{{ editorHint(sec.kind) }}</p>
+              <div class="editor-media">
+                <input
+                  type="url"
+                  placeholder="Colle l’URL https://…"
+                  [value]="linkUrl()"
+                  (input)="onLinkUrl($event)"
+                  (keydown.enter)="$event.preventDefault(); insertWebLink()"
+                />
+                <input
+                  type="text"
+                  placeholder="Texte affiché"
+                  [value]="linkText()"
+                  (input)="onLinkText($event)"
+                  (keydown.enter)="$event.preventDefault(); insertWebLink()"
+                />
+                <button class="btn ghost" type="button" (click)="insertWebLink()">Insérer le lien</button>
+              </div>
+              <p class="muted editor-hint">L’élève clique le texte, le site s’ouvre dans une nouvelle fenêtre.</p>
+              <div class="editor-media">
+                <input
+                  type="url"
+                  placeholder="URL d’une image ou d’un fichier"
+                  [value]="imageUrl()"
+                  (input)="onImageUrl($event)"
+                />
+                <button class="btn ghost" type="button" (click)="insertImageUrl()">Insérer l’image</button>
+                <button class="btn ghost" type="button" (click)="insertFileUrl()">Insérer le fichier</button>
+                <label class="btn ghost file-btn">
+                  Image
+                  <input type="file" accept="image/*" (change)="onImageFile($event)" />
+                </label>
+                <label class="btn ghost file-btn">
+                  Joindre un fichier
+                  <input type="file" [accept]="fileAccept" (change)="onAttachFile($event)" />
+                </label>
+              </div>
+              @if (saveError()) {
+                <p class="bad">{{ saveError() }}</p>
+              }
+              <div class="editor-actions">
+                <button class="btn" type="button" [disabled]="saveBusy()" (click)="saveEdit(sec)">
+                  Appliquer
+                </button>
+                <button class="btn ghost" type="button" (click)="cancelEdit()">Annuler</button>
+              </div>
+              <p class="muted editor-hint">Appliquer met à jour le chapitre. Sauvegarder (en haut) le garde.</p>
+            </div>
+          } @else {
+            @switch (sec.kind) {
+              @case ('title') {
+                <p><app-md-text [text]="sec.summary ?? ''" /></p>
+                <div class="objective">
+                  <p class="objective-kicker">À la fin, tu sauras…</p>
+                  <p class="objective-text">{{ sec.learningObjective }}</p>
+                </div>
+                @if (c.part === 'B') {
+                  <div class="callout rule">
+                    Seulement après la Partie A réelle (en formation complète). Cocher ici ne
+                    remplace pas le travail sur les machines virtuelles.
+                  </div>
+                }
+                @if (ch.completed && !preview()) {
+                  <p class="pill ok">Ce chapitre est déjà fini. Tu peux relire.</p>
+                }
+              }
+              @case ('objectives') {
+                <ul>
+                  @for (o of sec.bullets; track o) {
+                    <li>{{ o }}</li>
+                  }
+                </ul>
+              }
+              @case ('deliverables') {
+                @for (p of sec.paragraphs; track p) {
+                  <p><app-md-text [text]="p" /></p>
+                }
+              }
+              @case ('resources') {
+                @for (p of sec.paragraphs; track $index; let pi = $index) {
+                  <p><app-md-text [text]="p" [linkOrder]="linkOrder(sec.key, pi)" (linkClick)="onResourceLink($event)" /></p>
+                }
+                @if (sec.files?.length) {
+                  <div class="file-list">
+                    @for (f of sec.files; track $index; let fi = $index) {
+                      <a
+                        class="md-file"
+                        [href]="f.url"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        (click)="onResourceLink({ label: 'Télécharger : ' + f.label, url: f.url, order: fileOrder(sec.key, fi) })"
+                      >
+                        Télécharger : {{ f.label }}
+                      </a>
+                    }
+                  </div>
+                } @else if (!sec.paragraphs.length) {
+                  <p class="muted">Aucun document pour l’instant.</p>
+                }
+              }
+              @case ('quiz') {
+                <p class="muted">
+                  2 à 4 questions, sans photo. Relis le chapitre si besoin. Tu peux réessayer après un
+                  écart.
+                </p>
+                @if (!checklistDone() && !ch.completed && !preview()) {
+                  <p class="muted">Coche toute la liste avant le quiz.</p>
+                }
+                @for (q of quizQuestions(); track q.id; let n = $index) {
+                  <fieldset class="q" [disabled]="!preview() && (!checklistDone() || ch.completed)">
+                    <legend>{{ n + 1 }}. {{ q.prompt }}</legend>
+                    @for (choice of q.choices; track choice; let i = $index) {
+                      <label class="choice" [class.pick]="selected(q.id) === i">
+                        <input
+                          type="radio"
+                          [name]="q.id"
+                          [checked]="selected(q.id) === i"
+                          (change)="choose(q.id, i)"
+                        />
+                        {{ choice }}
+                      </label>
+                    }
+                    @if ((quizTried() || ch.completed || quizPassed()) && !isCorrect(q) && selected(q.id) !== undefined) {
+                      <p class="bad">Pas tout à fait. {{ q.explain }}</p>
+                    }
+                    @if ((quizTried() || ch.completed || quizPassed()) && isCorrect(q)) {
+                      <p class="good">{{ q.explain }}</p>
+                    }
+                  </fieldset>
+                }
+                @if (!quizQuestions().length) {
+                  <p class="muted">Pas encore de questions dans ce quiz.</p>
+                }
+                @if ((!ch.completed || preview()) && quizQuestions().length) {
+                  <button
+                    class="btn secondary"
+                    type="button"
+                    [disabled]="(!preview() && !checklistDone()) || !allAnswered()"
+                    (click)="submitQuiz()"
+                  >
+                    Vérifier le quiz
+                  </button>
+                  @if (quizTried() && quizPassed()) {
+                    <p class="good">Quiz validé ({{ quizQuestions().length }} / {{ quizQuestions().length }}). {{ preview() ? 'En aperçu, tu ne signales rien à Loutravo.' : 'Tu peux signaler le chapitre.' }}</p>
+                  } @else if (quizTried() && !quizPassed()) {
+                    <p class="bad">
+                      {{ correctCount() }} / {{ quizQuestions().length }} bonne(s) réponse(s). Relis le feedback, corrige, puis
+                      réessaie.
+                    </p>
+                  } @else if (!allAnswered() && (checklistDone() || preview())) {
+                    <p class="muted">Réponds à toutes les questions avant de vérifier.</p>
+                  }
+                }
+              }
+              @default {
+                @if (sec.kind === 'do') {
+                  @if (sec.checklist?.length) {
+                    <p class="muted">Coche seulement ce que tu as vraiment fait sur le matériel ou les machines virtuelles.</p>
+                  }
+                  @for (block of doBlocks(sec); track $index) {
+                    @switch (block.type) {
+                      @case ('text') {
+                        <p><app-md-text [text]="block.text" /></p>
+                      }
+                      @case ('tasks') {
+                        <ul class="checks">
+                          @for (item of block.items; track item.id) {
+                            <li>
+                              <label>
+                                <input
+                                  type="checkbox"
+                                  [checked]="checked(item.id)"
+                                  [disabled]="ch.completed && !preview()"
+                                  (change)="toggle(item, sec.key)"
+                                />
+                                <span>{{ item.label }}</span>
+                              </label>
+                            </li>
+                          }
+                        </ul>
+                      }
+                      @case ('commands') {
+                        <div class="commands">
+                          @for (cmd of block.texts; track cmd) {
+                            <code>{{ cmd }}</code>
+                          }
+                        </div>
+                      }
+                      @case ('schema') {
+                        <pre class="schema">{{ block.text }}</pre>
+                      }
+                      @case ('callout') {
+                        <div class="callout" [class.warn]="block.callout.type === 'warn'" [class.rule]="block.callout.type === 'rule'">
+                          {{ block.callout.text }}
+                        </div>
+                      }
+                    }
+                  }
+                  @if (sec.files?.length) {
+                    <div class="file-list">
+                      @for (f of sec.files; track f.url) {
+                        <a class="md-file" [href]="f.url" target="_blank" rel="noopener noreferrer" download>
+                          Télécharger : {{ f.label }}
+                        </a>
+                      }
+                    </div>
+                  }
+                  @if (sec.hints?.length) {
+                    <div class="hints">
+                      <p class="muted">
+                        Fermés au départ. Travaille d’abord sans aide. Puis ouvre-les un par un — du plus
+                        discret au plus concret.
+                      </p>
+                      @for (hint of sec.hints; track $index) {
+                        <details>
+                          <summary>Indice {{ $index + 1 }}{{ $index === 0 ? ' — discret' : $index === sec.hints.length - 1 ? ' — plus concret' : '' }}</summary>
+                          <p>{{ hint }}</p>
+                        </details>
+                      }
+                    </div>
+                  }
+                } @else {
+                  @if (sec.kind === 'see') {
+                    @for (block of seeBlocks(sec); track $index) {
+                      @if (block.type === 'image') {
+                        <div class="see-figure">
+                          <app-md-text [text]="block.text" />
+                        </div>
+                      } @else if (block.type === 'list') {
+                        <ul>
+                          @for (item of block.items; track $index) {
+                            <li><app-md-text [text]="item" /></li>
+                          }
+                        </ul>
+                      } @else {
+                        <p><app-md-text [text]="block.text" /></p>
+                      }
+                    }
+                  } @else {
+                    @for (p of sec.paragraphs; track p) {
+                      <p><app-md-text [text]="p" /></p>
+                    }
+                    @if (sec.bullets.length) {
+                      <ul>
+                        @for (b of sec.bullets; track b) {
+                          <li>{{ b }}</li>
+                        }
+                      </ul>
+                    }
+                  }
+                  @if (sec.schema) {
+                    <pre class="schema">{{ sec.schema }}</pre>
+                  }
+                  @if (sec.commands.length) {
+                    <div class="commands">
+                      @for (cmd of sec.commands; track cmd) {
+                        <code>{{ cmd }}</code>
+                      }
+                    </div>
+                  }
+                  @if (sec.callout) {
+                    <div class="callout" [class.warn]="sec.callout.type === 'warn'" [class.rule]="sec.callout.type === 'rule'">
+                      {{ sec.callout.text }}
+                    </div>
+                  }
+                  @if (sec.files?.length) {
+                    <div class="file-list">
+                      @for (f of sec.files; track f.url) {
+                        <a class="md-file" [href]="f.url" target="_blank" rel="noopener noreferrer" download>
+                          Télécharger : {{ f.label }}
+                        </a>
+                      }
+                    </div>
+                  }
+                }
+              }
+            }
+          }
+        </app-section-card>
+      }
+
+      @if (saveError() && !editingKey()) {
+        <p class="bad">{{ saveError() }}</p>
+      }
+
+      @if (ch.milestone; as m) {
+        <section class="card milestone-card">
+          <h2>{{ m.shortTitle }} ({{ m.code }})</h2>
+          <p>{{ m.recap }}</p>
+        </section>
+      }
+
+      @if (localError()) {
+        <p class="callout rule">{{ localError() }}</p>
+      }
+
+      @if (preview()) {
+        <div class="actions">
+          <a routerLink="/parcours" class="btn ghost">Retour au parcours</a>
+          <ng-container [ngTemplateOutlet]="nextChapterLink" />
+        </div>
+      } @else if (!ch.completed) {
+        <div class="actions">
+          <button class="btn" type="button" [disabled]="!canComplete() || busy()" (click)="complete()">
+            Valider le chapitre et le dire à Loutravo
+          </button>
+          <a routerLink="/parcours" class="btn ghost">Retour au parcours</a>
+          <ng-container [ngTemplateOutlet]="nextChapterLink" />
+        </div>
+        @if (!canComplete() && checklistDone() && !quizPassed()) {
+          <p class="muted">Le quiz doit être entièrement juste avant de valider — pas de photo.</p>
+        }
+      } @else {
+        <div class="actions">
+          <a routerLink="/parcours" class="btn ghost">Retour au parcours</a>
+          <ng-container [ngTemplateOutlet]="nextChapterLink" />
+        </div>
+      }
+    </article>
+  } @else {
+    <section class="card">
+      <h1>{{ ch.title }}</h1>
+      <p>
+        Ce chapitre vient de Loutravo mais n’a pas de fiche locale (titre ou code non reconnu).
+        Utilise les titres fournis dans <code>CHAPITRES-LOUTRAVO.md</code>.
+      </p>
+      <div class="actions">
+        <a routerLink="/parcours" class="btn ghost">Retour au parcours</a>
+        <ng-container [ngTemplateOutlet]="nextChapterLink" />
+      </div>
+    </section>
+  }
+
+  <ng-template #nextChapterLink>
+    @if (nextChapter(); as next) {
+      <a class="btn" [routerLink]="['/chapitre', next.id]">Chapitre suivant</a>
+    }
+  </ng-template>
+}

@@ -1,0 +1,17 @@
+# Dependencies and builds
+node_modules/
+dist/
+.angular/
+.firebase/
+out-tsc/
+
+# Logs and caches
+npm-debug.log*
+*.log
+.sass-cache/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.history/
