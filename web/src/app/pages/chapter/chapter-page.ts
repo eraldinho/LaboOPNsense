@@ -74,10 +74,15 @@ export class ChapterPage {
     if (!c) {
       return false;
     }
-    if (!c.checklist.length) {
+    const tasks = this.sections().flatMap((sec) =>
+      sec.kind === 'do'
+        ? groupedDoFlow(sec, c.commands).flatMap((block) => (block.type === 'tasks' ? block.items : []))
+        : [],
+    );
+    if (!tasks.length) {
       return true;
     }
-    return c.checklist.every((item) => this.session.isChecked(id, item.id));
+    return tasks.every((item) => this.session.isChecked(id, item.id));
   });
 
   protected readonly quizQuestions = computed(() => {

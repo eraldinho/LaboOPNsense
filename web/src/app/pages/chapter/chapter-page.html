@@ -421,6 +421,8 @@
         </div>
         @if (!canComplete() && checklistDone() && !quizPassed()) {
           <p class="muted">Le quiz doit être entièrement juste avant de valider — pas de photo.</p>
+        } @else if (!canComplete() && !checklistDone()) {
+          <p class="muted">Coche toutes les cases « À toi de faire » avant de valider.</p>
         }
       } @else {
         <div class="actions">

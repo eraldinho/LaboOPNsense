@@ -156,7 +156,13 @@ export function syncConvenienceFields(content: ChapterContent): void {
 
   const firstDo = layout.find((c) => c.kind === 'do');
   if (firstDo) {
-    content.checklist = mergeChecklist(content.checklist, checklistLabels(firstDo));
+    const flowTasks =
+      firstDo.flow
+        ?.filter((item): item is Extract<DoFlowItem, { type: 'task' }> => item.type === 'task')
+        .map((item) => ({ id: item.id, label: item.label })) ?? [];
+    content.checklist = flowTasks.length
+      ? flowTasks
+      : mergeChecklist(content.checklist, checklistLabels(firstDo));
     content.hints = firstDo.hints ? [...firstDo.hints] : [];
     const flowCommands = firstDo.flow
       ?.filter((item): item is Extract<DoFlowItem, { type: 'command' }> => item.type === 'command')

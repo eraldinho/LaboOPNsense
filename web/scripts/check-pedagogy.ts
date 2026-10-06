@@ -433,6 +433,8 @@ assert(/app-bug-report/.test(readFileSync(join(srcRoot, 'app/app.html'), 'utf8')
 assert(/Signaler un bug/.test(bugReport) && /Annuler/.test(bugReport) && /Envoyer/.test(bugReport), 'fenêtre signaler un bug');
 assert(/reportActivityBug/.test(uiBlob), 'api reportActivityBug');
 assert(/Chapitre suivant/.test(uiBlob), 'bouton chapitre suivant');
+assert(/checklistDone[\s\S]*groupedDoFlow[\s\S]*quizQuestions/.test(uiBlob), 'validation sur les cases affichées');
+assert(/Coche toutes les cases/.test(uiBlob), 'message si une case affichée n’est pas cochée');
 assert(/Ce test est fermé/.test(uiBlob), 'chapitre test fermé tant que le professeur ne débloque pas');
 assert(!/>Retour</.test(readFileSync(join(srcRoot, 'app/pages/chapter/chapter-page.html'), 'utf8')), 'retour au parcours, pas Retour');
 
