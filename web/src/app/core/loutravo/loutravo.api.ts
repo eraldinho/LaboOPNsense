@@ -46,6 +46,10 @@ export class LoutravoApi {
     return this.post('/getSession', { sessionToken });
   }
 
+  reportTestDraft(sessionToken: string, draft: unknown): Promise<{ ok: boolean }> {
+    return this.post('/reportTestDraft', { sessionToken, draft });
+  }
+
   reportSignal(payload: {
     sessionToken: string;
     chapterId: string;
