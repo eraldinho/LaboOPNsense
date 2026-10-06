@@ -2,7 +2,13 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { LaunchSession, LoutravoError, LoutravoErrorBody, ProgressResponse } from './loutravo.types';
+import {
+  LaunchSession,
+  LoutravoError,
+  LoutravoErrorBody,
+  ProgressResponse,
+  SessionSnapshot,
+} from './loutravo.types';
 
 export const ACTIVITY_CONTENT_MAX_MARKDOWN = 200_000;
 export const ACTIVITY_CONTENT_MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -34,6 +40,10 @@ export class LoutravoApi {
     status: 'started' | 'completed',
   ): Promise<ProgressResponse> {
     return this.post('/reportProgress', { sessionToken, chapterId, status });
+  }
+
+  getSession(sessionToken: string): Promise<SessionSnapshot> {
+    return this.post('/getSession', { sessionToken });
   }
 
   reportSignal(payload: {

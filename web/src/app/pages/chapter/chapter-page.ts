@@ -129,10 +129,16 @@ export class ChapterPage {
         if (this.session.isPreview()) {
           return;
         }
-        if (view.playable && !this.session.hasStartedLocal(view.id)) {
-          void this.safeStarted(view.id);
-        }
       });
+    });
+    effect(() => {
+      const view = this.view();
+      if (!view || this.session.isPreview()) {
+        return;
+      }
+      if (view.playable && !untracked(() => this.session.hasStartedLocal(view.id))) {
+        void this.safeStarted(view.id);
+      }
     });
   }
 

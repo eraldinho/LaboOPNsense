@@ -438,6 +438,7 @@ assert(!/>Retour</.test(readFileSync(join(srcRoot, 'app/pages/chapter/chapter-pa
 
 const guard = readFileSync(join(srcRoot, 'app/core/session/session.guard.ts'), 'utf8');
 const sessionSrc = readFileSync(join(srcRoot, 'app/core/session/session.service.ts'), 'utf8');
+assert(/getSession/.test(sessionSrc) && /refreshTestsUnlocked/.test(sessionSrc), 'séance ouverte relit le déblocage des tests');
 assert(guard.includes('ensureContent'), 'un chapitre rechargé relit le texte enregistré');
 assert(sessionSrc.includes('async ensureContent'), 'ensureContent recharge le texte');
 assert(

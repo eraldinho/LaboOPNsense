@@ -38,6 +38,15 @@ export interface ProgressResponse {
   assignmentStatus: AssignmentStatus;
   currentChapterId: string | null;
   completedChapterIds: string[];
+  testsUnlocked?: boolean;
+}
+
+export interface SessionSnapshot {
+  testsUnlocked: boolean;
+  currentChapterId: string | null;
+  completedChapterIds: string[];
+  status: AssignmentStatus;
+  preview?: boolean;
 }
 
 export interface LoutravoErrorBody {

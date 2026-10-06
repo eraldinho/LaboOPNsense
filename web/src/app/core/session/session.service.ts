@@ -11,6 +11,8 @@ import { MockLoutravoBackend } from '../loutravo/loutravo.mock';
 import { LaunchSession, LoutravoError, ProgressResponse } from '../loutravo/loutravo.types';
 import { chapterAccess, isPreviewFlag } from './chapter-access';
 
+const TESTS_POLL_MS = 5_000;
+
 const SESSION_KEY = 'loutravo.session';
 const UI_KEY = 'lab-opnsense.ui';
 const MOCK_FLAG = 'lab-opnsense.mock';
@@ -67,9 +69,19 @@ export class SessionService {
   readonly mock = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly ui = signal<UiState>(emptyUi());
+  private testsPollTimer: ReturnType<typeof setInterval> | null = null;
+  private testsPollInFlight = false;
+  private readonly onSessionVisible = (): void => {
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
+    void this.refreshTestsUnlocked();
+  };
 
   constructor() {
     this.restore();
+    this.bindTestsPoll();
+    this.syncTestsPoll();
   }
 
   isReady(): boolean {
@@ -339,6 +351,7 @@ export class SessionService {
     this.mockApi = null;
     this.contentLoaded = false;
     this.ui.set(emptyUi());
+    this.syncTestsPoll();
   }
 
   private async redeem(code: string, previewQuery: boolean): Promise<'ok' | 'error'> {
@@ -400,12 +413,87 @@ export class SessionService {
       currentChapterId: next.currentChapterId,
       status: next.assignmentStatus,
     };
+    if (typeof next.testsUnlocked === 'boolean') {
+      updated.testsUnlocked = next.testsUnlocked;
+    }
     this.persistSession(updated);
   }
 
   private persistSession(session: LaunchSession): void {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     this.session.set(session);
+    this.syncTestsPoll();
+  }
+
+  private bindTestsPoll(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    window.addEventListener('focus', this.onSessionVisible);
+    document.addEventListener('visibilitychange', this.onSessionVisible);
+  }
+
+  private shouldPollTests(): boolean {
+    const s = this.session();
+    if (!s || s.expiresAt <= Date.now() || this.isPreview() || this.mock()) {
+      return false;
+    }
+    if (s.testsUnlocked === true) {
+      return false;
+    }
+    return chapterAccess(s.chapters, s.completedChapterIds, false, false).some((item) => item.testLocked);
+  }
+
+  private syncTestsPoll(): void {
+    if (this.shouldPollTests()) {
+      this.startTestsPoll();
+      return;
+    }
+    this.stopTestsPoll();
+  }
+
+  private startTestsPoll(): void {
+    if (this.testsPollTimer !== null) {
+      return;
+    }
+    this.testsPollTimer = setInterval(() => {
+      void this.refreshTestsUnlocked();
+    }, TESTS_POLL_MS);
+    void this.refreshTestsUnlocked();
+  }
+
+  private stopTestsPoll(): void {
+    if (this.testsPollTimer === null) {
+      return;
+    }
+    clearInterval(this.testsPollTimer);
+    this.testsPollTimer = null;
+  }
+
+  private async refreshTestsUnlocked(): Promise<void> {
+    if (this.testsPollInFlight || !this.shouldPollTests()) {
+      return;
+    }
+    const s = this.session();
+    if (!s) {
+      return;
+    }
+    this.testsPollInFlight = true;
+    try {
+      const next = await this.api.getSession(s.sessionToken);
+      const current = this.session();
+      if (!current || current.sessionToken !== s.sessionToken) {
+        return;
+      }
+      if (next.testsUnlocked === true && current.testsUnlocked !== true) {
+        this.persistSession({ ...current, testsUnlocked: true });
+      }
+    } catch {
+      /* prochain intervalle */
+    } finally {
+      this.testsPollInFlight = false;
+      this.syncTestsPoll();
+    }
   }
 
   private persistUi(): void {
