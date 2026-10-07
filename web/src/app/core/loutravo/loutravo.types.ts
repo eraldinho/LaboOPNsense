@@ -28,6 +28,33 @@ export interface LaunchSession {
   preview?: boolean;
   /** Le professeur a débloqué les chapitres test pour cet élève. */
   testsUnlocked?: boolean;
+  /** Cases, choix de quiz et quiz déjà juste, pour rouvrir l’activité. */
+  work?: LearnerWork | null;
+  /** Brouillon de test déjà enregistré sur Loutravo, s’il y en a un. */
+  testDraft?: RemoteTestDraft | null;
+}
+
+export interface LearnerWork {
+  checklists: Record<string, string[]>;
+  quizzes: Record<string, Record<string, number>>;
+  quizPassed: Record<string, boolean>;
+  updatedAt: number;
+}
+
+export interface QuizAttemptReport {
+  chapterId: string;
+  questionId: string;
+  prompt: string;
+  answer: string;
+  correct: boolean;
+  at: number;
+  order?: number;
+}
+
+export interface RemoteTestDraft {
+  names?: Record<string, string>;
+  markers?: Record<string, Array<{ x: number; y: number } | null>>;
+  ports?: Record<string, { name?: string; utility?: string }>;
 }
 
 export interface ProgressResponse {
@@ -47,6 +74,8 @@ export interface SessionSnapshot {
   completedChapterIds: string[];
   status: AssignmentStatus;
   preview?: boolean;
+  work?: LearnerWork | null;
+  testDraft?: RemoteTestDraft | null;
 }
 
 export interface LoutravoErrorBody {

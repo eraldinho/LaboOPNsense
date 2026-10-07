@@ -4,9 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   LaunchSession,
+  LearnerWork,
   LoutravoError,
   LoutravoErrorBody,
   ProgressResponse,
+  QuizAttemptReport,
   SessionSnapshot,
 } from './loutravo.types';
 
@@ -60,6 +62,14 @@ export class LoutravoApi {
     order?: number;
   }): Promise<{ ok: boolean }> {
     return this.post('/reportSignal', payload);
+  }
+
+  reportWork(
+    sessionToken: string,
+    work: LearnerWork,
+    attempts: QuizAttemptReport[],
+  ): Promise<{ ok: boolean; preview?: boolean; workUpdatedAt?: number }> {
+    return this.post('/reportWork', { sessionToken, work, attempts });
   }
 
   reportActivityBug(payload: {

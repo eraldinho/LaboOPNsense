@@ -8,7 +8,7 @@ import { chapterMilestone } from '../content/bank/groups';
 import { MilestoneDef } from '../content/bank/milestones';
 import { LoutravoApi } from '../loutravo/loutravo.api';
 import { MockLoutravoBackend } from '../loutravo/loutravo.mock';
-import { LaunchSession, LoutravoError, ProgressResponse } from '../loutravo/loutravo.types';
+import { LaunchSession, LearnerWork, LoutravoError, ProgressResponse, QuizAttemptReport, RemoteTestDraft } from '../loutravo/loutravo.types';
 import { chapterAccess, isPreviewFlag } from './chapter-access';
 
 const TESTS_POLL_MS = 5_000;
@@ -42,6 +42,11 @@ export interface UiState {
   quizzes: Record<string, Record<string, number>>;
   quizPassed: Record<string, boolean>;
   started: string[];
+  /** Horodatage du dernier enregistrement confirmé par Loutravo. */
+  updatedAt?: number;
+  /** Modifications pas encore confirmées. */
+  dirty?: boolean;
+  pendingAttempts?: QuizAttemptReport[];
 }
 
 export interface ProgressView {
@@ -71,6 +76,10 @@ export class SessionService {
   readonly ui = signal<UiState>(emptyUi());
   private testsPollTimer: ReturnType<typeof setInterval> | null = null;
   private testsPollInFlight = false;
+  private workTimer: ReturnType<typeof setTimeout> | null = null;
+  private workInFlight = false;
+  private workAgain = false;
+  private workGen = 0;
   private readonly onSessionVisible = (): void => {
     if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
       return;
@@ -81,7 +90,9 @@ export class SessionService {
   constructor() {
     this.restore();
     this.bindTestsPoll();
+    this.bindWorkFlush();
     this.syncTestsPoll();
+    if (this.ui().dirty) this.scheduleWork();
   }
 
   isReady(): boolean {
@@ -116,6 +127,7 @@ export class SessionService {
           this.persistSession({ ...current, preview: true });
         }
       }
+      await this.pullWork();
       await this.reloadContent();
       return 'ok';
     }
@@ -138,6 +150,7 @@ export class SessionService {
         completedChapterIds: [],
       };
     }
+    await this.flushWork();
     const s = this.requireSession();
     try {
       const next = this.mock()
@@ -295,8 +308,7 @@ export class SessionService {
       list.add(itemId);
     }
     ui.checklists[chapterId] = [...list];
-    this.ui.set(ui);
-    this.persistUi();
+    this.commitUi(ui);
   }
 
   isChecked(chapterId: string, itemId: string): boolean {
@@ -309,8 +321,7 @@ export class SessionService {
     quiz[questionId] = index;
     ui.quizzes[chapterId] = quiz;
     ui.quizPassed[chapterId] = false;
-    this.ui.set(ui);
-    this.persistUi();
+    this.commitUi(ui);
   }
 
   answer(chapterId: string, questionId: string): number | undefined {
@@ -321,8 +332,19 @@ export class SessionService {
   setQuizPassed(chapterId: string, passed: boolean): void {
     const ui = structuredClone(this.ui());
     ui.quizPassed[chapterId] = passed;
-    this.ui.set(ui);
-    this.persistUi();
+    this.commitUi(ui);
+  }
+
+  /** Mémorise un essai de quiz. Un second choix identique tout de suite n’est pas renvoyé. */
+  noteQuizAttempt(attempt: Omit<QuizAttemptReport, 'at'>): void {
+    if (this.isPreview() || this.mock()) return;
+    const ui = structuredClone(this.ui());
+    const pending = [...(ui.pendingAttempts ?? [])];
+    const last = [...pending].reverse().find((item) => item.chapterId === attempt.chapterId && item.questionId === attempt.questionId);
+    if (last && last.answer === attempt.answer && last.correct === attempt.correct) return;
+    pending.push({ ...attempt, at: Date.now() });
+    ui.pendingAttempts = pending.slice(-200);
+    this.commitUi(ui);
   }
 
   quizPassed(chapterId: string): boolean {
@@ -351,6 +373,10 @@ export class SessionService {
     this.mockApi = null;
     this.contentLoaded = false;
     this.ui.set(emptyUi());
+    if (this.workTimer !== null) {
+      clearTimeout(this.workTimer);
+      this.workTimer = null;
+    }
     this.syncTestsPoll();
   }
 
@@ -362,6 +388,8 @@ export class SessionService {
       this.mockApi = null;
       sessionStorage.removeItem(MOCK_FLAG);
       this.persistSession(session);
+      this.adoptServer(session.work, session.testDraft);
+      if (this.ui().dirty) this.scheduleWork();
       const path = window.location.pathname;
       window.history.replaceState({}, '', session.preview ? `${path}?preview=1` : path);
       this.errorMessage.set(null);
@@ -496,6 +524,118 @@ export class SessionService {
     }
   }
 
+  private commitUi(ui: UiState): void {
+    if (this.isPreview() || this.mock()) {
+      this.ui.set(ui);
+      this.persistUi();
+      return;
+    }
+    this.workGen += 1;
+    ui.dirty = true;
+    ui.updatedAt = Date.now();
+    this.ui.set(ui);
+    this.persistUi();
+    this.scheduleWork();
+  }
+
+  private scheduleWork(): void {
+    if (this.workTimer !== null) clearTimeout(this.workTimer);
+    this.workTimer = setTimeout(() => {
+      this.workTimer = null;
+      void this.flushWork();
+    }, 800);
+  }
+
+  private async flushWork(): Promise<void> {
+    if (this.workTimer !== null) {
+      clearTimeout(this.workTimer);
+      this.workTimer = null;
+    }
+    if (this.workInFlight) {
+      this.workAgain = true;
+      return;
+    }
+    if (this.isPreview() || this.mock()) return;
+    const s = this.session();
+    if (!s || s.expiresAt <= Date.now()) return;
+    const ui = this.ui();
+    const attempts = [...(ui.pendingAttempts ?? [])];
+    if (!ui.dirty && !attempts.length) return;
+    const gen = this.workGen;
+    const work: LearnerWork = {
+      checklists: ui.checklists,
+      quizzes: ui.quizzes,
+      quizPassed: ui.quizPassed,
+      updatedAt: ui.updatedAt ?? Date.now(),
+    };
+    this.workInFlight = true;
+    try {
+      const result = await this.api.reportWork(s.sessionToken, work, attempts);
+      const current = structuredClone(this.ui());
+      if (this.workGen === gen) {
+        current.pendingAttempts = [];
+        current.dirty = false;
+        current.updatedAt = result.workUpdatedAt ?? current.updatedAt;
+      } else {
+        const sent = new Set(attempts.map((item) => `${item.chapterId}\n${item.questionId}\n${item.at}`));
+        current.pendingAttempts = (current.pendingAttempts ?? []).filter(
+          (item) => !sent.has(`${item.chapterId}\n${item.questionId}\n${item.at}`),
+        );
+      }
+      this.ui.set(current);
+      this.persistUi();
+    } catch {
+      /* nouvel essai à la prochaine saisie */
+    } finally {
+      this.workInFlight = false;
+      if (this.workAgain || (this.workGen !== gen && this.ui().dirty)) {
+        this.workAgain = false;
+        this.scheduleWork();
+      }
+    }
+  }
+
+  private async pullWork(): Promise<void> {
+    if (this.isPreview() || this.mock() || !this.isReady()) return;
+    const s = this.session();
+    if (!s) return;
+    try {
+      const snap = await this.api.getSession(s.sessionToken);
+      this.adoptServer(snap.work, snap.testDraft);
+      if (this.ui().dirty) this.scheduleWork();
+    } catch {
+      /* la copie locale reste */
+    }
+  }
+
+  private adoptServer(work: LearnerWork | null | undefined, testDraft?: RemoteTestDraft | null): void {
+    const current = this.session();
+    if (testDraft && current) {
+      this.persistSession({ ...current, testDraft });
+    }
+    if (!work || this.isPreview() || this.ui().dirty) return;
+    if (work.updatedAt <= (this.ui().updatedAt ?? 0)) return;
+    this.ui.set({
+      ...this.ui(),
+      checklists: work.checklists ?? {},
+      quizzes: work.quizzes ?? {},
+      quizPassed: work.quizPassed ?? {},
+      updatedAt: work.updatedAt,
+      dirty: false,
+    });
+    this.persistUi();
+  }
+
+  private bindWorkFlush(): void {
+    if (typeof window === 'undefined') return;
+    window.addEventListener('pagehide', () => {
+      void this.flushWork();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') void this.flushWork();
+    });
+  }
+
   private persistUi(): void {
     sessionStorage.setItem(UI_KEY, JSON.stringify(this.ui()));
   }
@@ -519,7 +659,12 @@ export class SessionService {
       const uiRaw = sessionStorage.getItem(UI_KEY);
       if (uiRaw) {
         const parsedUi = JSON.parse(uiRaw) as Partial<UiState>;
-        this.ui.set({ ...emptyUi(), ...parsedUi, quizPassed: parsedUi.quizPassed ?? {} });
+        this.ui.set({
+          ...emptyUi(),
+          ...parsedUi,
+          quizPassed: parsedUi.quizPassed ?? {},
+          pendingAttempts: Array.isArray(parsedUi.pendingAttempts) ? parsedUi.pendingAttempts : [],
+        });
       }
     } catch {
       this.clear();

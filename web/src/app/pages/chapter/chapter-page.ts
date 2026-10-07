@@ -210,8 +210,25 @@ export class ChapterPage {
     if (this.view()?.locked || this.view()?.completed) {
       return;
     }
+    const previous = this.selected(questionId);
     this.quizTried.set(false);
     this.session.setAnswer(this.id(), questionId, index);
+    if (previous === index) {
+      return;
+    }
+    const question = this.quizQuestions().find((item) => item.id === questionId);
+    if (!question) {
+      return;
+    }
+    const order = this.quizQuestions().findIndex((item) => item.id === questionId);
+    this.session.noteQuizAttempt({
+      chapterId: this.id(),
+      questionId,
+      prompt: question.prompt,
+      answer: question.choices[index] ?? '',
+      correct: index === question.correctIndex,
+      order: order >= 0 ? order : undefined,
+    });
   }
 
   protected isCorrect(q: QuizQuestion): boolean {
